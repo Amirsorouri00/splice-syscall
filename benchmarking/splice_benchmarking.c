@@ -93,15 +93,14 @@ int do_vmsplice(int fd, char **data)
 int do_splice(int fdin, int fdout){
     int len = K_MULTIPLY * SPLICE_SIZE;
     int written = 0, nread = 0;
-    // printf("here2");
 	while (len > 0) {
 		written = ssplice(fdin, NULL, fdout, NULL, len, SPLICE_F_MOVE);
         if (written < 0)
             return error("splice");
         len -= written;
-        printf("%d,", len);
 	}
-    return nread;
+	printf("len = %d .\n", len);
+    return K_MULTIPLY*SPLICE_SIZE;
 }
 
 int main(int argc, char *argv[]) 
@@ -111,11 +110,13 @@ int main(int argc, char *argv[])
     
 	ssize_t nread;
 	char* name;
-	int pip[2], fd[2];
-	if (pipe(pip) < 0) 
-        exit(1); 
-	if (pipe(fd) < 0) 
-		exit(1); 
+	int pip[2], fd[2], child_pipe[2];
+	if (pipe(child_pipe) < 0 || pipe(pip) < 0 || pipe(fd) < 0) 
+		exit(1);
+
+	char** data1 = empty_allocator();
+	char** data = initializer();
+
 
 	pid_t   childpid;
 	if((childpid = fork()) == -1)
@@ -125,22 +126,24 @@ int main(int argc, char *argv[])
 	}
 	if(childpid == 0)
 	{
-		/* First Child process closes up input side of pipe */
+		/* First Child process closes up input side of pipe. */
 		name = "First Child";
 		close(pip[0]);
 		close(fd[0]);
 
-		char** data = initializer();
-
 		start = clocker(0, name);   
 		size_printer(name);
 		nread = do_vmsplice(pip[1], data);
+		close(pip[0]);
 		end = clocker(1, name);
 
-		double result = time_calc(end, start, name);
+		// double result = time_calc(end, start, name);
+		printf("---------------------------------------------\n");
+		write(fd[1], &start, sizeof(start));
 		write(fd[1], &end, sizeof(start));
+
 	    
-		free_allocator(data);
+		// free_allocator(data);
 		exit(0);
 	}
 	else
@@ -154,35 +157,31 @@ int main(int argc, char *argv[])
         if(child2_pid == 0)
 	    {
             /* Second Child process closes up output side of pipe */
-            close(fd[1]);
-            close(pip[1]);
             name = "Second Child";
 
-            char** data1 = empty_allocator();
-            int child_pipe[2];
-            if (pipe(child_pipe) < 0) 
-                exit(1); 
-            // close(child_pipe[0]);
+            close(fd[1]);
+            close(pip[1]);             
+            close(child_pipe[0]);
+
             start = clocker(0, name);
             size_printer(name);
-            #include <fcntl.h> // library for fcntl function
-            // if (fcntl(pip[0], F_SETFL, O_NONBLOCK) < 0) 
-            //     exit(2);
-            // if (fcntl(child_pipe[1], F_SETFL, O_NONBLOCK) < 0) 
-            //     exit(2);
-            nread = do_splice(pip[0], child_pipe[1]);
+            nread = do_splice(pip[0], STDOUT_FILENO);
             end = clocker(1, name);
             printf("in parent: number of reads from the pipe = %ld\n", nread);
+            // double result = time_calc(end, start, name);
 
-            double res;
-            double result = time_calc(end, start, name);
-            read(fd[0], &res, sizeof(start));
             printf("---------------------------------------------\n");
-            printf("time to write and read into the pipe by vmsplice = %f\n", res + result);
-
-            free_allocator(data1);
-
-            
+            clock_t first_start;
+            clock_t first_end;
+            read(fd[0], &first_start, sizeof(start));
+            read(fd[0], &first_end, sizeof(start));
+			double first_result = time_calc(first_end, first_start, "First Child");
+            printf("---------------------------------------------\n");
+			double result = time_calc(end, start, name);
+            printf("---------------------------------------------\n");
+            result = time_calc(end, first_start, "realtime_calculation");
+            // printf("time to write and read into the pipe by vmsplice = %f\n", result);
+			exit(0);
         }
         else{
             /* Parent process closes up output side of pipe */
@@ -191,9 +190,12 @@ int main(int argc, char *argv[])
             waitpid(child2_pid, &child2_status, 0);
             if (child1_status == 0 && child2_status == 0)  // Verify child process terminated without error.  
             {
-                printf("The child processes terminated normally.");    
+                printf("The child processes terminated normally.\n");    
             }
-            else{printf("The child process terminated with an error!.");}
+            else{printf("The child process terminated with an error!.\n");}
+			free_allocator(data);
+            free_allocator(data1);
+
             exit(0);
         }
 	}

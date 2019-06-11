@@ -24,7 +24,7 @@
 
 
 #define SPLICE_SIZE  1024
-#define K_MULTIPLY   20
+#define K_MULTIPLY   1024
 
 
 #if defined(__i386__)
