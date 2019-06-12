@@ -28,6 +28,7 @@ static int parse_options(int argc, char *argv[])
 				index++;
 				break;
 			case 'g':
+				printf("gift\n");
 				splice_flags = SPLICE_F_GIFT;
 				index++;
 				break;
@@ -35,10 +36,6 @@ static int parse_options(int argc, char *argv[])
 				return -1;
 		}
 	}
-
-	// optind is for the extra arguments 
-    // which are not parsed 
-	// optind--
     for(; optind <= argc; optind++){      
         printf("extra arguments: %s\n", argv[optind-1]);  
     } 
@@ -132,7 +129,7 @@ int main(int argc, char *argv[])
 		close(fd[0]);
 
 		start = clocker(0, name);   
-		size_printer(name);
+		// size_printer(name);
 		nread = do_vmsplice(pip[1], data);
 		close(pip[0]);
 		end = clocker(1, name);
@@ -140,10 +137,7 @@ int main(int argc, char *argv[])
 		// double result = time_calc(end, start, name);
 		printf("---------------------------------------------\n");
 		write(fd[1], &start, sizeof(start));
-		write(fd[1], &end, sizeof(start));
-
-	    
-		// free_allocator(data);
+		write(fd[1], &end, sizeof(start));	    
 		exit(0);
 	}
 	else
@@ -164,12 +158,11 @@ int main(int argc, char *argv[])
             close(child_pipe[0]);
 
             start = clocker(0, name);
-            size_printer(name);
+            // size_printer(name);
             nread = do_splice(pip[0], STDOUT_FILENO);
             end = clocker(1, name);
-            printf("in parent: number of reads from the pipe = %ld\n", nread);
-            // double result = time_calc(end, start, name);
 
+            printf("in parent: number of reads from the pipe = %ld\n", nread);
             printf("---------------------------------------------\n");
             clock_t first_start;
             clock_t first_end;

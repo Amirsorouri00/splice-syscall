@@ -3,4 +3,4 @@
 
 #### This is how it runs:
         # make
-        # ./splice-benchmarking | cat
+        # ./splice-benchmarking -{u, g} | cat
