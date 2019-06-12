@@ -24,7 +24,7 @@
 
 
 #define SPLICE_SIZE  1024
-#define K_MULTIPLY   1024
+#define K_MULTIPLY   20000
 
 
 #if defined(__i386__)
@@ -224,13 +224,9 @@ void k_generator(char* chars){
 }
 
 char** empty_allocator(){
-    // clock_init();
-
-    char** buf = (char**) malloc(K_MULTIPLY);
-
+    char** buf =  malloc(sizeof(char*) * K_MULTIPLY);
     for(int i = 0; i < K_MULTIPLY ;i++)
-        buf[i] = (char*) malloc(SPLICE_SIZE);
-    
+        buf[i] = malloc(sizeof(char) * SPLICE_SIZE);
     return buf;
 }
 

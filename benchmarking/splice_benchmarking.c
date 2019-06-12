@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/poll.h>
+
 
 #include "splicer-benchmarking.h"
 
@@ -88,15 +90,19 @@ int do_vmsplice(int fd, char **data)
 }
 
 int do_splice(int fdin, int fdout){
+    struct pollfd pfdout = { .fd = fdout, .events = POLLOUT, };
     int len = K_MULTIPLY * SPLICE_SIZE;
     int written = 0, nread = 0;
+	
 	while (len > 0) {
+		if (poll(&pfdout, 1, -1) < 0)
+			return error("poll");
 		written = ssplice(fdin, NULL, fdout, NULL, len, SPLICE_F_MOVE);
         if (written < 0)
             return error("splice");
         len -= written;
 	}
-	printf("len = %d .\n", len);
+	// printf("len = %d .\n", len);
     return K_MULTIPLY*SPLICE_SIZE;
 }
 
@@ -111,7 +117,8 @@ int main(int argc, char *argv[])
 	if (pipe(child_pipe) < 0 || pipe(pip) < 0 || pipe(fd) < 0) 
 		exit(1);
 
-	char** data1 = empty_allocator();
+	// char** data1 = empty_allocator();
+	// char** data1 = NULL;
 	char** data = initializer();
 
 
@@ -162,7 +169,7 @@ int main(int argc, char *argv[])
             nread = do_splice(pip[0], STDOUT_FILENO);
             end = clocker(1, name);
 
-            printf("in parent: number of reads from the pipe = %ld\n", nread);
+            printf("in %s: number of reads from the pipe = %ld\n", name, nread);
             printf("---------------------------------------------\n");
             clock_t first_start;
             clock_t first_end;
@@ -187,8 +194,7 @@ int main(int argc, char *argv[])
             }
             else{printf("The child process terminated with an error!.\n");}
 			free_allocator(data);
-            free_allocator(data1);
-
+            // free_allocator(data1);
             exit(0);
         }
 	}
