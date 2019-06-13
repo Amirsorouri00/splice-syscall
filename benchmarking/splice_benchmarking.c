@@ -11,8 +11,11 @@
 #include <sys/wait.h>
 #include <sys/poll.h>
 
-
 #include "splicer-benchmarking.h"
+
+
+#define meg     1000000
+
 
 static int align_mask = 65535;
 static int splice_flags;
@@ -55,7 +58,6 @@ int do_vmsplice(int fd, char **data)
 		},
 	};
 	int written, idx = 0, nread = 0;
-    // printf("%d", page_counter)
 	while (page_counter >= 0) {
 		/*
 		 * in a real app you'd be more clever with poll of course,
@@ -180,6 +182,8 @@ int main(int argc, char *argv[])
 			double result = time_calc(end, start, name);
             printf("---------------------------------------------\n");
             result = time_calc(end, first_start, "realtime_calculation");
+	        printf("The frequency is eqals to(Mbps): %f .\n", (double)((2* K_MULTIPLY*SPLICE_SIZE)/(result*meg)));
+
             // printf("time to write and read into the pipe by vmsplice = %f\n", result);
 			exit(0);
         }
